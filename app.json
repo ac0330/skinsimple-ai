@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "SkinSimple AI",
+    "slug": "skinsimple-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FBF7F1",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.skinsimpleai.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "SkinSimple AI uses your camera to scan product barcodes and take photos of products you want to check."
+      }
+    },
+    "android": {
+      "package": "com.skinsimpleai.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FBF7F1"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SkinSimple AI uses your camera to scan product barcodes and take photos of products you want to check."
+        }
+      ]
+    ]
+  }
+}
