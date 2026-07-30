@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import type { Budget, SkinProfile, SkinType } from '../types/domain';
 
@@ -28,9 +28,28 @@ const initialProfile: SkinProfile = {
 
 const SkinProfileContext = createContext<SkinProfileContextValue | undefined>(undefined);
 
+const PROFILE_STORAGE_KEY = 'skinsimple_skin_profile';
+
+interface StoredProfileState {
+  profile: SkinProfile;
+  otherSelected: boolean;
+}
+
+// Persisted to localStorage on web only, so the quiz answers survive across tabs/refreshes.
+function readPersistedState(): StoredProfileState | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+  return raw ? (JSON.parse(raw) as StoredProfileState) : null;
+}
+
+function persistState(state: StoredProfileState): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state));
+}
+
 export function SkinProfileProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile] = useState<SkinProfile>(initialProfile);
-  const [otherSelected, setOtherSelectedState] = useState(false);
+  const [profile, setProfile] = useState<SkinProfile>(() => readPersistedState()?.profile ?? initialProfile);
+  const [otherSelected, setOtherSelectedState] = useState(() => readPersistedState()?.otherSelected ?? false);
 
   const setSkinType = useCallback((skinType: SkinType) => {
     setProfile((prev) => ({ ...prev, skinType }));
@@ -59,6 +78,10 @@ export function SkinProfileProvider({ children }: { children: React.ReactNode })
   const setBudget = useCallback((budget: Budget) => {
     setProfile((prev) => ({ ...prev, budget }));
   }, []);
+
+  useEffect(() => {
+    persistState({ profile, otherSelected });
+  }, [profile, otherSelected]);
 
   const isTypeStepValid = !!profile.skinType && profile.sensitive !== null;
   const isConcernsStepValid = otherSelected

@@ -65,7 +65,7 @@ Param list types live in `src/navigation/types.ts` (`RootStackParamList`, `MainT
 
 ### Mock-backed service layer
 
-`src/services/authService.ts` and `src/services/scanService.ts` define interfaces (`AuthService`, `ScanService`) with `Mock*` implementations exported as singletons (`authService`, `scanService`). Screens and contexts only ever import the interface-typed singleton, never the `Mock*` class directly — swapping in a real backend later means writing a new class that implements the same interface, no call-site changes. `MockAuthService` is a single in-memory "account" (signup overwrites it; login checks against it) — there is no multi-user support and it doesn't persist across app restarts.
+`src/services/authService.ts` and `src/services/scanService.ts` define interfaces (`AuthService`, `ScanService`) with `Mock*` implementations exported as singletons (`authService`, `scanService`). Screens and contexts only ever import the interface-typed singleton, never the `Mock*` class directly — swapping in a real backend later means writing a new class that implements the same interface, no call-site changes. `MockAuthService` keeps accounts in memory keyed by (lowercased) email — signup rejects an email that's already registered, login checks the matching account's password. On web, accounts and the logged-in session are also mirrored to `localStorage` (see `authService.ts`/`AuthContext.tsx`) so they survive tab refreshes/new tabs; there's still no real backend, no password hashing, and native (iOS) has no persistence across app restarts since it has no `localStorage` equivalent wired up.
 
 ### State layout
 
