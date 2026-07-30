@@ -54,8 +54,16 @@ function persistAccounts(accounts: Record<string, StoredAccount>): void {
 }
 
 // In-memory multi-account stand-in, keyed by email; swap for a real backend behind the same AuthService interface.
+// `accounts` re-syncs from localStorage on every call (not just once at construction) so accounts created
+// in other tabs are visible immediately — on native, where there's no localStorage, this is a no-op and the
+// in-memory map is the only store, matching the existing "no persistence across app restarts" behavior there.
 export class MockAuthService implements AuthService {
   private accounts: Record<string, StoredAccount> = readPersistedAccounts();
+
+  private syncAccounts(): Record<string, StoredAccount> {
+    this.accounts = { ...this.accounts, ...readPersistedAccounts() };
+    return this.accounts;
+  }
 
   async signUp(input: SignUpInput): Promise<AuthUser> {
     if (!EMAIL_RE.test(input.email)) {
@@ -64,12 +72,13 @@ export class MockAuthService implements AuthService {
     if (input.password.length < 6) {
       throw new AuthError('Password must be at least 6 characters');
     }
+    const accounts = this.syncAccounts();
     const key = normalizeEmail(input.email);
-    if (this.accounts[key]) {
+    if (accounts[key]) {
       throw new AuthError('An account with this email already exists');
     }
-    this.accounts[key] = { ...input };
-    persistAccounts(this.accounts);
+    accounts[key] = { ...input };
+    persistAccounts(accounts);
     return { name: input.name, email: input.email };
   }
 
@@ -80,7 +89,7 @@ export class MockAuthService implements AuthService {
     if (input.password.length < 6) {
       throw new AuthError('Password must be at least 6 characters');
     }
-    const account = this.accounts[normalizeEmail(input.email)];
+    const account = this.syncAccounts()[normalizeEmail(input.email)];
     if (!account || account.password !== input.password) {
       throw new AuthError('Email or password doesn’t match our records');
     }
