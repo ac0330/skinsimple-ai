@@ -20,6 +20,7 @@ export interface AuthService {
   signUp(input: SignUpInput): Promise<AuthUser>;
   logIn(input: LogInInput): Promise<AuthUser>;
   logOut(): Promise<void>;
+  updateName(email: string, name: string): Promise<AuthUser>;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -97,6 +98,22 @@ export class MockAuthService implements AuthService {
   }
 
   async logOut(): Promise<void> {}
+
+  async updateName(email: string, name: string): Promise<AuthUser> {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      throw new AuthError('Name cannot be empty');
+    }
+    const accounts = this.syncAccounts();
+    const key = normalizeEmail(email);
+    const account = accounts[key];
+    if (!account) {
+      throw new AuthError('No account found');
+    }
+    accounts[key] = { ...account, name: trimmed };
+    persistAccounts(accounts);
+    return { name: trimmed, email: account.email };
+  }
 }
 
 export const authService: AuthService = new MockAuthService();

@@ -8,7 +8,8 @@ import styled from 'styled-components/native';
 import { BackgroundCardScreen } from '../../components/BackgroundCardScreen';
 import { PrimaryButton } from '../../components/Button';
 import { Screen } from '../../components/Screen';
-import { useAuth } from '../../context/AuthContext';
+import { TextField } from '../../components/TextField';
+import { AuthError, useAuth } from '../../context/AuthContext';
 import { useSkinProfile } from '../../context/SkinProfileContext';
 import { profileBanner } from '../../data/mockProducts';
 import type { MainTabParamList, ProfileStackParamList, RootStackParamList } from '../../navigation/types';
@@ -48,6 +49,13 @@ const NameText = styled.Text`
   font-family: ${({ theme }) => theme.fonts.heading};
   font-size: 18px;
   color: ${({ theme }) => theme.colors.textPrimary};
+`;
+
+const EditNameLink = styled.Text`
+  font-size: 13px;
+  font-family: ${({ theme }) => theme.fonts.bodySemibold};
+  color: ${({ theme }) => theme.colors.accentText};
+  text-decoration: underline;
 `;
 
 const EmailText = styled.Text`
@@ -148,13 +156,38 @@ const ConfirmActions = styled.View`
   margin-top: 4px;
 `;
 
+const ModalErrorText = styled.Text`
+  font-size: 12.5px;
+  color: ${({ theme }) => theme.colors.error};
+  text-align: center;
+`;
+
 export function ProfileScreen({ navigation }: Props) {
-  const { user, logOut } = useAuth();
+  const { user, logOut, updateName } = useAuth();
   const { profile, skinTypeSummary, concernsSummary } = useSkinProfile();
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameError, setNameError] = useState('');
 
   const displayName = (user?.name && user.name.trim()) || 'there';
   const avatarInitial = displayName.charAt(0).toUpperCase();
+
+  const openEditName = () => {
+    setNameDraft(user?.name ?? '');
+    setNameError('');
+    setEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    try {
+      setNameError('');
+      await updateName(nameDraft);
+      setEditingName(false);
+    } catch (e) {
+      if (e instanceof AuthError) setNameError(e.message);
+    }
+  };
 
   return (
     <Screen padded={false} edges={[]} scroll={false}>
@@ -164,6 +197,9 @@ export function ProfileScreen({ navigation }: Props) {
             <AvatarInitial>{avatarInitial}</AvatarInitial>
           </Avatar>
           <NameText>{displayName}</NameText>
+          <EditNameLink onPress={openEditName} suppressHighlighting>
+            Edit
+          </EditNameLink>
         </AvatarRow>
         <EmailText style={{ marginLeft: 70, marginTop: -14 }}>
           {user?.email || 'your@email.com'}
@@ -229,6 +265,20 @@ export function ProfileScreen({ navigation }: Props) {
                 }}
               />
               <PrimaryButton label="Cancel" variant="muted" onPress={() => setConfirmLogout(false)} />
+            </ConfirmActions>
+          </ConfirmCard>
+        </ModalBackdrop>
+      </Modal>
+
+      <Modal visible={editingName} transparent animationType="fade">
+        <ModalBackdrop>
+          <ConfirmCard>
+            <ConfirmTitle>Edit your name</ConfirmTitle>
+            <TextField placeholder="Name" value={nameDraft} onChangeText={setNameDraft} autoFocus />
+            {nameError ? <ModalErrorText>{nameError}</ModalErrorText> : null}
+            <ConfirmActions>
+              <PrimaryButton label="Save" onPress={handleSaveName} disabled={!nameDraft.trim()} />
+              <PrimaryButton label="Cancel" variant="muted" onPress={() => setEditingName(false)} />
             </ConfirmActions>
           </ConfirmCard>
         </ModalBackdrop>
