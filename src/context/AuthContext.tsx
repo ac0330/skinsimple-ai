@@ -15,19 +15,22 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const SESSION_STORAGE_KEY = 'skinsimple_mock_session';
 
-// Persisted to localStorage on web only, so a logged-in session survives across tabs/refreshes.
+// Persisted to sessionStorage (not localStorage) on web, so each tab keeps its own independent
+// login — two tabs can be signed into two different accounts at once without one overwriting the
+// other's session. sessionStorage still survives refreshes within that same tab, just not across
+// brand-new tabs (which start signed out, same as opening the site on a second device would).
 function readPersistedUser(): AuthUser | null {
-  if (typeof window === 'undefined' || !window.localStorage) return null;
-  const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+  if (typeof window === 'undefined' || !window.sessionStorage) return null;
+  const raw = window.sessionStorage.getItem(SESSION_STORAGE_KEY);
   return raw ? (JSON.parse(raw) as AuthUser) : null;
 }
 
 function persistUser(user: AuthUser | null): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
+  if (typeof window === 'undefined' || !window.sessionStorage) return;
   if (user) {
-    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+    window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
   } else {
-    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
   }
 }
 
