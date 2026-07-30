@@ -1,5 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useAuth } from './AuthContext';
+import type { AuthUser } from '../services/authService';
 import type { Budget, SkinProfile, SkinType } from '../types/domain';
 
 interface SkinProfileContextValue {
@@ -28,28 +30,70 @@ const initialProfile: SkinProfile = {
 
 const SkinProfileContext = createContext<SkinProfileContextValue | undefined>(undefined);
 
-const PROFILE_STORAGE_KEY = 'skinsimple_skin_profile';
+const PROFILE_STORAGE_PREFIX = 'skinsimple_skin_profile';
+// Old un-scoped key from before per-account profiles existed.
+const LEGACY_GLOBAL_STORAGE_KEY = PROFILE_STORAGE_PREFIX;
 
 interface StoredProfileState {
   profile: SkinProfile;
   otherSelected: boolean;
 }
 
-// Persisted to localStorage on web only, so the quiz answers survive across tabs/refreshes.
-function readPersistedState(): StoredProfileState | null {
+function storageKeyFor(user: AuthUser | null): string | null {
+  return user ? `${PROFILE_STORAGE_PREFIX}:${user.email.trim().toLowerCase()}` : null;
+}
+
+// Persisted to localStorage on web only, scoped per logged-in account, so two accounts on the
+// same browser never see each other's quiz answers. Not persisted while signed out (pre-signup
+// quiz progress lives in memory only, same as before per-account scoping existed).
+function readPersistedState(key: string): StoredProfileState | null {
   if (typeof window === 'undefined' || !window.localStorage) return null;
-  const raw = window.localStorage.getItem(PROFILE_STORAGE_KEY);
+  const raw = window.localStorage.getItem(key);
   return raw ? (JSON.parse(raw) as StoredProfileState) : null;
 }
 
-function persistState(state: StoredProfileState): void {
+function persistState(key: string, state: StoredProfileState): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
-  window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(state));
+  window.localStorage.setItem(key, JSON.stringify(state));
+}
+
+// One-time upgrade path from the old single shared key (before accounts had separate profiles).
+function readLegacyGlobalState(): StoredProfileState | null {
+  if (typeof window === 'undefined' || !window.localStorage) return null;
+  const raw = window.localStorage.getItem(LEGACY_GLOBAL_STORAGE_KEY);
+  return raw ? (JSON.parse(raw) as StoredProfileState) : null;
+}
+
+function loadInitialState(user: AuthUser | null): StoredProfileState {
+  const key = storageKeyFor(user);
+  if (!key) return { profile: initialProfile, otherSelected: false };
+
+  const existing = readPersistedState(key);
+  if (existing) return existing;
+
+  const legacy = readLegacyGlobalState();
+  if (legacy) {
+    persistState(key, legacy);
+    window.localStorage.removeItem(LEGACY_GLOBAL_STORAGE_KEY);
+    return legacy;
+  }
+
+  return { profile: initialProfile, otherSelected: false };
 }
 
 export function SkinProfileProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile] = useState<SkinProfile>(() => readPersistedState()?.profile ?? initialProfile);
-  const [otherSelected, setOtherSelectedState] = useState(() => readPersistedState()?.otherSelected ?? false);
+  const { user } = useAuth();
+
+  const initialStateRef = useRef<StoredProfileState | null>(null);
+  if (initialStateRef.current === null) {
+    initialStateRef.current = loadInitialState(user);
+  }
+
+  const [profile, setProfile] = useState<SkinProfile>(() => initialStateRef.current!.profile);
+  const [otherSelected, setOtherSelectedState] = useState(() => initialStateRef.current!.otherSelected);
+
+  const activeKeyRef = useRef<string | null>(storageKeyFor(user));
+  const justSwitchedRef = useRef(false);
 
   const setSkinType = useCallback((skinType: SkinType) => {
     setProfile((prev) => ({ ...prev, skinType }));
@@ -79,9 +123,40 @@ export function SkinProfileProvider({ children }: { children: React.ReactNode })
     setProfile((prev) => ({ ...prev, budget }));
   }, []);
 
+  // Runs when the signed-in account changes (login, logout, or a fresh signup). Loads that
+  // account's saved profile, or — for a brand-new account — attaches whatever was just filled
+  // in during the quiz to it. Guarded with justSwitchedRef so the effect below doesn't immediately
+  // clobber this with the stale pre-switch profile in the same render pass.
   useEffect(() => {
-    persistState({ profile, otherSelected });
-  }, [profile, otherSelected]);
+    const nextKey = storageKeyFor(user);
+    if (activeKeyRef.current === nextKey) return;
+    activeKeyRef.current = nextKey;
+    justSwitchedRef.current = true;
+
+    if (!nextKey) {
+      setProfile(initialProfile);
+      setOtherSelectedState(false);
+      return;
+    }
+
+    const stored = readPersistedState(nextKey);
+    if (stored) {
+      setProfile(stored.profile);
+      setOtherSelectedState(stored.otherSelected);
+    } else {
+      persistState(nextKey, { profile, otherSelected });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (justSwitchedRef.current) {
+      justSwitchedRef.current = false;
+      return;
+    }
+    const key = storageKeyFor(user);
+    if (!key) return;
+    persistState(key, { profile, otherSelected });
+  }, [user, profile, otherSelected]);
 
   const isTypeStepValid = !!profile.skinType && profile.sensitive !== null;
   const isConcernsStepValid = otherSelected

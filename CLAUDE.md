@@ -69,9 +69,9 @@ Param list types live in `src/navigation/types.ts` (`RootStackParamList`, `MainT
 
 ### State layout
 
-Four context providers, composed in `src/context/AppProviders.tsx` (order matters only in that `SkinProfileProvider` and `SettingsProvider` don't depend on `AuthContext`, but are nested inside it anyway):
+Four context providers, composed in `src/context/AppProviders.tsx` (`SettingsProvider` doesn't depend on `AuthContext` but is nested inside it anyway; `SkinProfileProvider` does depend on it — see below — so their relative nesting order matters):
 - `AuthContext` — current user / isAuthenticated, drives `RootNavigator`'s branch choice.
-- `SkinProfileContext` — the quiz answers (skin type, sensitivity, concerns, budget) plus derived validity flags (`isTypeStepValid` etc.) and summary strings used on Home/Profile.
+- `SkinProfileContext` — the quiz answers (skin type, sensitivity, concerns, budget) plus derived validity flags (`isTypeStepValid` etc.) and summary strings used on Home/Profile. On web, profile data is persisted to `localStorage` scoped per logged-in account's email (via `useAuth()`), so two accounts on the same browser never see each other's answers; signing out resets the in-memory profile without persisting it anywhere.
 - `SettingsContext` — account-level toggles (currently just `notificationsOn`).
 
 There used to be a `ScanHistoryContext` (Recent Scans on Home) and a `personalizedOn` setting; both were deliberately removed — don't reintroduce a "recent scans" list or a "personalized recommendations" toggle without being asked, and don't be surprised if old conversation/design references mention them.
