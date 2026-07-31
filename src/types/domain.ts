@@ -1,4 +1,4 @@
-export type SkinType = 'Dry' | 'Normal' | 'Combination' | 'Oily';
+export type SkinType = 'Dry' | 'Normal' | 'Combination' | 'Oily' | 'Other';
 
 export type Budget = 'Under $15' | '$15–30' | '$30–50' | '$50+' | "I'm open to anything";
 

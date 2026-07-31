@@ -1,6 +1,6 @@
 import type { Budget, SkinType } from '../types/domain';
 
-export const SKIN_TYPES: SkinType[] = ['Dry', 'Normal', 'Combination', 'Oily'];
+export const SKIN_TYPES: SkinType[] = ['Dry', 'Normal', 'Combination', 'Oily', 'Other'];
 
 export const CONCERNS: string[] = [
   'Acne & breakouts',
