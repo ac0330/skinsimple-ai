@@ -4,6 +4,7 @@ export type Budget = 'Under $15' | '$15–30' | '$30–50' | '$50+' | "I'm open 
 
 export interface SkinProfile {
   skinType: SkinType | null;
+  otherSkinType: string;
   sensitive: boolean | null;
   concerns: string[];
   otherConcern: string;

@@ -7,6 +7,7 @@ import { Chip } from '../../components/Chip';
 import { FadeHeroScreen, TextCloud } from '../../components/FadeHeroScreen';
 import { QuizProgressBar } from '../../components/QuizProgressBar';
 import { ScreenHeader } from '../../components/ScreenHeader';
+import { TextField } from '../../components/TextField';
 import { useSkinProfile } from '../../context/SkinProfileContext';
 import { whiteWaterWavesImage } from '../../data/mockProducts';
 import { SKIN_TYPES } from '../../data/quizOptions';
@@ -57,7 +58,7 @@ const Spacer = styled.View`
 
 export function QuizTypeScreen({ navigation, route }: Props) {
   const { returnTo } = route.params;
-  const { profile, setSkinType, setSensitive, isTypeStepValid } = useSkinProfile();
+  const { profile, setSkinType, setOtherSkinType, setSensitive, isTypeStepValid } = useSkinProfile();
 
   const goToReturnTarget = () => {
     if (returnTo) navigation.navigate('MainTabs', { screen: returnTo });
@@ -87,6 +88,13 @@ export function QuizTypeScreen({ navigation, route }: Props) {
             />
           ))}
         </ChipRow>
+        {profile.skinType === 'Other' ? (
+          <TextField
+            value={profile.otherSkinType}
+            onChangeText={setOtherSkinType}
+            placeholder="Tell us your skin type..."
+          />
+        ) : null}
         <TextCloud>
           <SectionTitle>Do you have sensitive skin?</SectionTitle>
         </TextCloud>

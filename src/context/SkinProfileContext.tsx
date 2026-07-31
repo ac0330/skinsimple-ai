@@ -7,6 +7,7 @@ import type { Budget, SkinProfile, SkinType } from '../types/domain';
 interface SkinProfileContextValue {
   profile: SkinProfile;
   setSkinType: (skinType: SkinType) => void;
+  setOtherSkinType: (text: string) => void;
   setSensitive: (sensitive: boolean) => void;
   toggleConcern: (concern: string) => void;
   setOtherSelected: (selected: boolean) => void;
@@ -22,6 +23,7 @@ interface SkinProfileContextValue {
 
 const initialProfile: SkinProfile = {
   skinType: null,
+  otherSkinType: '',
   sensitive: null,
   concerns: [],
   otherConcern: '',
@@ -99,6 +101,10 @@ export function SkinProfileProvider({ children }: { children: React.ReactNode })
     setProfile((prev) => ({ ...prev, skinType }));
   }, []);
 
+  const setOtherSkinType = useCallback((text: string) => {
+    setProfile((prev) => ({ ...prev, otherSkinType: text }));
+  }, []);
+
   const setSensitive = useCallback((sensitive: boolean) => {
     setProfile((prev) => ({ ...prev, sensitive }));
   }, []);
@@ -158,14 +164,18 @@ export function SkinProfileProvider({ children }: { children: React.ReactNode })
     persistState(key, { profile, otherSelected });
   }, [user, profile, otherSelected]);
 
-  const isTypeStepValid = !!profile.skinType && profile.sensitive !== null;
+  const isTypeStepValid =
+    !!profile.skinType &&
+    (profile.skinType !== 'Other' || profile.otherSkinType.trim().length > 0) &&
+    profile.sensitive !== null;
   const isConcernsStepValid = otherSelected
     ? profile.otherConcern.trim().length > 0
     : profile.concerns.length > 0;
   const isBudgetStepValid = !!profile.budget;
 
   const skinTypeSummary = profile.skinType
-    ? profile.skinType + (profile.sensitive ? ', Sensitive' : '')
+    ? (profile.skinType === 'Other' ? profile.otherSkinType.trim() || 'Other' : profile.skinType) +
+      (profile.sensitive ? ', Sensitive' : '')
     : 'Not set';
 
   const concernsSummary = useMemo(() => {
@@ -178,6 +188,7 @@ export function SkinProfileProvider({ children }: { children: React.ReactNode })
     () => ({
       profile,
       setSkinType,
+      setOtherSkinType,
       setSensitive,
       toggleConcern,
       setOtherSelected,
@@ -193,6 +204,7 @@ export function SkinProfileProvider({ children }: { children: React.ReactNode })
     [
       profile,
       setSkinType,
+      setOtherSkinType,
       setSensitive,
       toggleConcern,
       setOtherSelected,

@@ -34,7 +34,10 @@ export interface GeminiService {
 
 function describeProfile(profile: SkinProfile): string {
   const parts: string[] = [];
-  if (profile.skinType) parts.push(`Skin type: ${profile.skinType}`);
+  if (profile.skinType) {
+    const skinType = profile.skinType === 'Other' ? profile.otherSkinType.trim() || 'Other' : profile.skinType;
+    parts.push(`Skin type: ${skinType}`);
+  }
   if (profile.sensitive) parts.push('Has sensitive skin');
   const concerns = [...profile.concerns, ...(profile.otherConcern ? [profile.otherConcern] : [])];
   if (concerns.length) parts.push(`Concerns: ${concerns.join(', ')}`);
